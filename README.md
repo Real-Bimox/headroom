@@ -171,14 +171,14 @@ Headroom can trim that too, from the proxy, without you changing any code:
 
 Applies to Anthropic `/v1/messages` **and** OpenAI-compatible endpoints
 (`/v1/chat/completions`, `/v1/responses`). Effort routing uses
-`reasoning_effort` on OpenAI, `thinking.budget_tokens` /
-`output_config.effort` on Anthropic — same clamp-only invariant on both
-paths, same `output_shaper:*` label vocabulary.
+`reasoning_effort` on OpenAI (both chat completions and Responses),
+`thinking.budget_tokens` / `output_config.effort` on Anthropic — same
+clamp-only invariant on all paths, same `output_shaper:*` label vocabulary.
 
-Turn it on:
+**On by default.** The output shaper is enabled out of the box. To disable:
 
 ```bash
-export HEADROOM_OUTPUT_SHAPER=1     # off by default
+export HEADROOM_OUTPUT_SHAPER=0
 headroom proxy --port 8787
 ```
 
@@ -372,6 +372,9 @@ troubleshooting.
 - **CacheAligner** - detects and warns about volatile content that can bust provider KV cache prefixes; never rewrites prompts.
 - **Live-zone compression** — compresses only new bytes (fresh tool output, latest turn); frozen prefix stays byte-identical so provider cache is not busted. History is never dropped.
 - **CCR** — reversible compression; LLM retrieves originals on demand.
+- **Cross-turn dedup** *(on by default)* — lossless verbatim deduplication across turns; replaces re-displayed file bytes with compact in-context pointers.
+- **Thinking compaction** *(on by default)* — compresses prior-turn reasoning for models that resend it as plaintext (Qwen, Kimi, GLM, DeepSeek-R1). Deterministic → cache-stable.
+- **Output shaper** *(on by default)* — verbosity steering + effort routing on all paths (Anthropic, OpenAI chat completions, OpenAI Responses). Lowers reasoning effort on mechanical tool-result turns.
 - **Cross-agent memory** — shared store, agent provenance, auto-dedup.
 - **SharedContext** — compressed context passing across multi-agent workflows.
 - **`headroom learn`** — plugin-based failure mining for Claude, Codex, Gemini.

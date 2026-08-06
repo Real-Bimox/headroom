@@ -66,6 +66,7 @@ from headroom.proxy.output_steering import (
 )
 from headroom.proxy.output_turn_policy import (
     TurnKind,
+    classify_openai_chat_messages,
     classify_openai_responses_input,
     classify_turn,
 )
@@ -80,10 +81,12 @@ __all__ = [
     "apply_openai_chat_verbosity_steering",
     "apply_openai_responses_verbosity_steering",
     "apply_verbosity_steering",
+    "classify_openai_chat_messages",
     "classify_openai_responses_input",
     "classify_turn",
     "resolve_verbosity_level",
     "route_effort",
+    "route_openai_chat_effort",
     "route_openai_reasoning_effort",
     "route_openai_text_verbosity",
     "shape_openai_chat_request",
@@ -110,7 +113,7 @@ class OutputShaperSettings:
 
     @classmethod
     def from_env(cls) -> OutputShaperSettings:
-        enabled = runtime_env.getenv("HEADROOM_OUTPUT_SHAPER", "").lower() in (
+        enabled = runtime_env.getenv("HEADROOM_OUTPUT_SHAPER", "1").lower() in (
             "1",
             "true",
             "yes",
@@ -260,6 +263,30 @@ def route_openai_reasoning_effort(
     return []
 
 
+def route_openai_chat_effort(
+    body: dict[str, Any],
+    kind: TurnKind,
+    settings: OutputShaperSettings,
+) -> list[str]:
+    """Lower explicitly-present ``reasoning_effort`` on OpenAI chat mechanical turns.
+
+    Chat completions use a top-level ``reasoning_effort`` string field
+    (``"low"``, ``"medium"``, ``"high"``), unlike the Responses format which
+    nests it under ``reasoning.effort``.  Only mutates when the client sent
+    the field explicitly — never injects it where absent.
+    """
+    if kind is not TurnKind.MECHANICAL_CONTINUATION:
+        return []
+
+    effort = body.get("reasoning_effort")
+    target = settings.mechanical_effort
+    lowered = lower_effort_value(effort, target)
+    if lowered is not None:
+        body["reasoning_effort"] = lowered
+        return [f"output_shaper:chat_reasoning_effort:{effort}->{lowered}"]
+    return []
+
+
 def route_openai_text_verbosity(body: dict[str, Any]) -> list[str]:
     """Set or lower OpenAI ``text.verbosity`` conservatively."""
     text_config = body.get("text")
@@ -364,10 +391,9 @@ def shape_openai_chat_request(
 
     The chat counterpart of :func:`shape_request`. Chat carries the system
     prompt as a ``role: "system"`` message, so verbosity steering uses the
-    chat-specific injector. Effort routing is intentionally not applied here:
-    the ``route_effort`` levers write Anthropic-shaped config and there is no
-    portable chat/completions equivalent, so only the verbosity steering lever
-    (the one that reduces output tokens) runs on this path.
+    chat-specific injector. Effort routing lowers the top-level
+    ``reasoning_effort`` field on mechanical tool-result continuations
+    (o-series models, DashScope thinking models, etc.).
     """
     if settings is None:
         settings = OutputShaperSettings.from_env()
@@ -381,6 +407,14 @@ def shape_openai_chat_request(
     if level > 0 and apply_openai_chat_verbosity_steering(body, level):
         result.changed = True
         result.labels.append(f"output_shaper:verbosity:L{level}")
+
+    if settings.effort_router_enabled:
+        kind = classify_openai_chat_messages(body.get("messages", []))
+        labels = route_openai_chat_effort(body, kind, settings)
+        if labels:
+            result.changed = True
+            result.labels.extend(labels)
+            logger.debug("OpenAIChatOutputShaper: turn=%s mutations=%s", kind.value, labels)
 
     return result
 

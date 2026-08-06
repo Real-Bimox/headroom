@@ -1852,7 +1852,7 @@ class ContentRouter(Transform):
         # config was built). Effective only in lossless mode (guarded in apply()).
         self._cross_turn_dedup_enabled: bool = (
             self.config.enable_cross_turn_dedup
-            or os.environ.get("HEADROOM_DEDUPE", "").strip().lower() in ("1", "true", "yes", "on")
+            or os.environ.get("HEADROOM_DEDUPE", "1").strip().lower() in ("1", "true", "yes", "on")
         )
         # EXPERIMENT (HEADROOM_EXPERIMENTAL_READ_KEEP_RATIO): file reads are
         # protected verbatim by default so the agent keeps exact bytes to patch.

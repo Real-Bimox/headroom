@@ -268,8 +268,12 @@ class TestShapeRequest:
         assert result.changed is False
         assert body == snapshot
 
-    def test_from_env_defaults_off(self, monkeypatch):
+    def test_from_env_defaults_on(self, monkeypatch):
         monkeypatch.delenv("HEADROOM_OUTPUT_SHAPER", raising=False)
+        assert OutputShaperSettings.from_env().enabled is True
+
+    def test_from_env_explicit_off(self, monkeypatch):
+        monkeypatch.setenv("HEADROOM_OUTPUT_SHAPER", "0")
         assert OutputShaperSettings.from_env().enabled is False
 
     def test_from_env_enabled_with_overrides(self, monkeypatch):

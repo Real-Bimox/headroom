@@ -123,3 +123,49 @@ def classify_openai_responses_input(input_data: Any) -> TurnKind:
     if saw_tool_output and not saw_unknown:
         return TurnKind.MECHANICAL_CONTINUATION
     return TurnKind.UNKNOWN
+
+
+def classify_openai_chat_messages(messages: list[dict[str, Any]]) -> TurnKind:
+    """Classify the latest OpenAI chat/completions turn from message roles.
+
+    OpenAI chat uses ``role: "tool"`` messages for tool outputs (unlike
+    Anthropic's ``tool_result`` content blocks).  A mechanical continuation
+    is one where the trailing messages are all tool outputs with no new
+    user prose after the last assistant turn.
+    """
+    if not messages:
+        return TurnKind.UNKNOWN
+
+    saw_tool = False
+    for msg in reversed(messages):
+        if not isinstance(msg, dict):
+            return TurnKind.UNKNOWN
+        role = msg.get("role")
+        if role == "assistant":
+            break
+        if role == "tool":
+            saw_tool = True
+            content = msg.get("content")
+            if isinstance(content, str):
+                try:
+                    import json as _json
+                    data = _json.loads(content)
+                    if isinstance(data, dict) and data.get("error"):
+                        return TurnKind.ERROR_CONTINUATION
+                except (ValueError, TypeError):
+                    pass
+            continue
+        if role == "user":
+            content = msg.get("content")
+            if isinstance(content, str) and content.strip():
+                return TurnKind.NEW_USER_ASK
+            if isinstance(content, list) and content:
+                return TurnKind.NEW_USER_ASK
+            continue
+        if role == "system":
+            continue
+        return TurnKind.UNKNOWN
+
+    if saw_tool:
+        return TurnKind.MECHANICAL_CONTINUATION
+    return TurnKind.UNKNOWN
