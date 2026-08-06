@@ -3536,7 +3536,7 @@ class OpenAIHandlerMixin:
         # `<think>…</think>` (GLM/DeepSeek); no-ops when neither is present (OpenAI's
         # own encrypted models). Deterministic → forwarded prefix stays cache-stable;
         # keep_last_turns protects the active reasoning. Never breaks the request.
-        if os.environ.get("HEADROOM_THINKING_COMPACT", "").strip().lower() in (
+        if os.environ.get("HEADROOM_THINKING_COMPACT", "1").strip().lower() in (
             "1",
             "true",
             "yes",

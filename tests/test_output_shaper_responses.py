@@ -301,7 +301,7 @@ class TestResponsesConversationKey:
 
 class TestShapeHandlerHelper:
     def test_disabled_returns_nothing(self, monkeypatch):
-        monkeypatch.delenv("HEADROOM_OUTPUT_SHAPER", raising=False)
+        monkeypatch.setenv("HEADROOM_OUTPUT_SHAPER", "0")
         labels, mutated = _shape_openai_responses_payload(
             _mechanical_body(), model="gpt-5.5", request_id="t1"
         )

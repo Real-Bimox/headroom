@@ -51,9 +51,9 @@ pytest.importorskip("fastapi")
 
 @pytest.fixture(autouse=True)
 def _disable_output_shaper(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Isolate this suite from the opt-in HEADROOM_OUTPUT_SHAPER a developer shell
-    # may export, which otherwise perturbs the byte-faithful assertions.
-    monkeypatch.delenv("HEADROOM_OUTPUT_SHAPER", raising=False)
+    # Isolate this suite from the HEADROOM_OUTPUT_SHAPER default (on),
+    # which otherwise perturbs the byte-faithful assertions.
+    monkeypatch.setenv("HEADROOM_OUTPUT_SHAPER", "0")
 
 
 # ---------------------------------------------------------------------------

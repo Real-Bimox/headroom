@@ -287,7 +287,8 @@ def test_apply_dedups_reread_and_keeps_prefix_stable():
     assert _tool_texts(out2)[:1] == _tool_texts(out1)  # t1 block byte-identical
 
 
-def test_apply_no_dedup_when_flag_off():
+def test_apply_no_dedup_when_flag_off(monkeypatch):
+    monkeypatch.setenv("HEADROOM_DEDUPE", "0")
     span = "\n".join(f"    v_{i} = f({i})" for i in range(12))
     import copy
 
