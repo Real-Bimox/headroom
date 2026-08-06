@@ -49,7 +49,7 @@ Headroom compresses everything your AI agent reads — tool outputs, logs, RAG c
 
 - **Library** — `compress(messages)` in Python or TypeScript, inline in any app
 - **Proxy** — `headroom proxy --port 8787`, zero code changes, any language
-- **Agent wrap** — `headroom wrap claude|codex|grok|copilot|cursor|aider|opencode|cline|continue|goose|openhands|openclaw|vibe|omp|zcode` in one command; undo with `headroom unwrap <tool>`
+- **Agent wrap** — `headroom wrap claude|codex|grok|copilot|cursor|aider|opencode|cline|continue|goose|openhands|openclaw|vibe|omp|qwen|zcode` in one command; undo with `headroom unwrap <tool>`
 - **MCP server** — `headroom_compress`, `headroom_retrieve`, `headroom_stats` for any MCP client
 - **Cross-agent memory** — shared store across Claude, Codex, Gemini, Grok, auto-dedup
 - **`headroom learn`** — mines failed sessions, writes corrections to `CLAUDE.local.md` (default, gitignored) or `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` / `GROK.md`
@@ -241,6 +241,7 @@ shows an **Output Tokens Saved** card next to input compression, labelled
 | Oh My Pi     | ✅              | injects config · starts proxy + launches |
 | Cortex Code  | Library only    | 60–65% savings (library mode; no `wrap`) |
 | Kimi CLI     | ✅              | OAuth bearer forwarded — log in once |
+| Qwen Code    | ✅              | `--plan coding|token` — two upstream APIs |
 | ZCode        | ✅              | starts proxy and prints base URLs for ZCode settings |
 
 Any OpenAI-compatible client works via `headroom proxy`. MCP-native: `headroom mcp install`.
@@ -533,10 +534,12 @@ Headroom runs **locally**, covers **every** content type, works with every major
 |                                                                              | Scope                                          | Deploy                             | Local | Reversible |
 |------------------------------------------------------------------------------|------------------------------------------------|------------------------------------|:-----:|:----------:|
 | **Headroom**                                                                 | All context — tools, RAG, logs, files, history | Proxy · library · middleware · MCP | Yes   | Yes        |
+| [RTK](https://github.com/rtk-ai/rtk)                                        | CLI command outputs                            | CLI wrapper                        | Yes   | No         |
+| [lean-ctx](https://github.com/yvgude/lean-ctx)                               | Tool output, files, shell, history             | Proxy · library · middleware · MCP · CLI | Yes | Yes    |
 | [Compresr](https://compresr.ai), [Token Co.](https://thetokencompany.ai)    | Text sent to their API                         | Hosted API call                    | No    | No         |
 | OpenAI Compaction                                                            | Conversation history                           | Provider-native                    | No    | No         |
 
-> **Stack & integrations.** Headroom is the **proxy** — that's what we build and offer, and it compresses everything flowing through it no matter what sits upstream. Our recommended companion is **[Serena](https://github.com/oraios/serena)** (installed by default when you wrap an agent) for semantic code navigation — plus **Ponytail** if you want leaner model output. Everything else is your call: you're free to attach your own tooling — code-memory MCP, Graphify, Caveman, or any MCP server — and Headroom compresses downstream of all of it.
+> **Stack & integrations.** Headroom is the **proxy** — that's what we build and offer, and it compresses everything flowing through it no matter what sits upstream. Our recommended companion is **[Serena](https://github.com/oraios/serena)** (installed by default when you wrap an agent) for semantic code navigation — plus **Ponytail** if you want leaner model output. Everything else is your call: Headroom vendors the third-party [RTK](https://github.com/rtk-ai/rtk) and [lean-ctx](https://github.com/yvgude/lean-ctx) binaries for shell-output rewriting, but we don't own or control either project — swap between them with `HEADROOM_CONTEXT_TOOL`, or turn them off. You're free to attach your own tooling too — code-memory MCP, Graphify, Caveman, or any MCP server — and Headroom compresses downstream of all of it.
 
 ## Contributing
 
