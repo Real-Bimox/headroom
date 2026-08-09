@@ -15,6 +15,7 @@ from headroom.providers.registry import (
     resolve_extra_headers,
 )
 from headroom.proxy.modes import PROXY_MODE_CACHE, normalize_proxy_mode
+from headroom.proxy.dependencies import check_proxy_dependencies
 
 from .main import main
 
@@ -1017,6 +1018,17 @@ def proxy(
     Usage with OpenAI-compatible clients:
         OPENAI_BASE_URL=http://localhost:8787/v1 your-app
     """
+    dependency_status = check_proxy_dependencies()
+    if not dependency_status.ready:
+        click.secho(
+            "Error: Proxy runtime dependencies are missing: "
+            + ", ".join(dependency_status.missing),
+            fg="red",
+            err=True,
+        )
+        click.secho(f"Install them with: {dependency_status.install_hint}", fg="red", err=True)
+        raise SystemExit(1)
+
     # Import here to avoid slow startup
     try:
         from headroom.proxy.server import (
