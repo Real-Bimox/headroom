@@ -167,6 +167,13 @@ def test_wrap_qwen_passes_args(
 
     assert result.exit_code == 0, result.output
     assert captured["args"] == ("-m", "qwen3-coder-plus")
+    configured_args, configured_env, _display = captured["configure_launch"](
+        8787, captured["args"], captured["env"], []
+    )
+    assert configured_args[-2] == "--openai-base-url"
+    assert configured_args[-1].startswith("http://127.0.0.1:8787/")
+    assert configured_args[-1].endswith("/v1")
+    assert configured_env["OPENAI_BASE_URL"] == configured_args[-1]
 
 
 def test_wrap_qwen_not_found(

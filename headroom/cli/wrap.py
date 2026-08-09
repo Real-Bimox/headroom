@@ -6796,6 +6796,22 @@ def qwen(
         port, os.environ, project=_project_name_from_cwd()
     )
 
+    def _configure_qwen_launch(
+        actual_port: int,
+        args: tuple,
+        launch_env: dict[str, str],
+        display: list[str],
+    ) -> tuple[tuple, dict[str, str], list[str]]:
+        routed_env, routed_display = _build_qwen_launch_env(
+            actual_port, launch_env, project=_project_name_from_cwd()
+        )
+        # Qwen's modelProviders baseUrl outranks OPENAI_BASE_URL. The CLI flag
+        # has higher precedence than both, so this prevents a saved/custom
+        # provider entry from bypassing Headroom while preserving its bearer.
+        proxy_url = routed_env["OPENAI_BASE_URL"]
+        routed_args = (*args, "--openai-base-url", proxy_url)
+        return routed_args, routed_env, [*display, *routed_display]
+
     _launch_tool(
         binary=qwen_bin,
         args=qwen_args,
@@ -6809,6 +6825,7 @@ def qwen(
         agent_type="qwen",
         code_graph=code_graph,
         openai_api_url=resolved_api_url,
+        configure_launch=_configure_qwen_launch,
     )
 
 
