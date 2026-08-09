@@ -18,6 +18,12 @@ def _enabled(value: str | None) -> bool:
     return (value or "").lower() in {"1", "true", "yes", "on"}
 
 
+def eager_preload_enabled(environ: Mapping[str, str] | None = None) -> bool:
+    """Whether optional compressor/model warmup may delay proxy readiness."""
+    env = os.environ if environ is None else environ
+    return _enabled(env.get("HEADROOM_EAGER_PRELOAD"))
+
+
 @dataclass(frozen=True)
 class ResolvedRuntimeConfig:
     """Process-wide settings resolved before constructing ``ProxyConfig``."""

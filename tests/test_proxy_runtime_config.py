@@ -1,4 +1,4 @@
-from headroom.proxy.runtime_config import ResolvedRuntimeConfig
+from headroom.proxy.runtime_config import ResolvedRuntimeConfig, eager_preload_enabled
 
 
 def test_runtime_config_has_one_precedence_boundary() -> None:
@@ -17,3 +17,8 @@ def test_runtime_config_honors_explicit_empty_environment() -> None:
     )
     assert config.mode == "cache"
     assert config.stateless is False
+
+
+def test_eager_preload_is_explicit_opt_in() -> None:
+    assert eager_preload_enabled({}) is False
+    assert eager_preload_enabled({"HEADROOM_EAGER_PRELOAD": "1"}) is True

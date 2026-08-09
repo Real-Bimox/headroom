@@ -110,6 +110,7 @@ from headroom.providers.registry import (
     resolve_api_targets,
 )
 from headroom.proxy import runtime_env
+from headroom.proxy.runtime_config import eager_preload_enabled
 from headroom.proxy.audit import is_auditable_path, record_admin_action
 from headroom.proxy.auth_mode import should_stamp_codex_client
 from headroom.proxy.background_compression import BackgroundCompressor
@@ -1619,7 +1620,7 @@ class HeadroomProxy(
         self._kompress_status = "not installed"
         eager_status: dict[str, str] = {}
 
-        if self.config.optimize:
+        if self.config.optimize and eager_preload_enabled():
             logger.info("Pre-loading compressors and parsers...")
             # Run the preload OFF the event loop with a bound. The loop body
             # already swallows per-transform Exceptions, so the only thing that
