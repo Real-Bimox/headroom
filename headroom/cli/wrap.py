@@ -6700,64 +6700,6 @@ def kimi(
 
 
 # =============================================================================
-# Hermes CLI
-# =============================================================================
-HERMES_TOOL = ToolSpec(
-    key="hermes",
-    label="HERMES",
-    executables=("hermes",),
-    install_hint="Hermes CLI must be installed before wrapping it.",
-    missing_name="'hermes'",
-)
-
-
-@wrap.command(context_settings={"ignore_unknown_options": True})
-@click.option(
-    "--port", "-p", default=8787, type=click.IntRange(1, 65535), help="Proxy port (default: 8787)"
-)
-@click.option("--no-proxy", is_flag=True, help="Skip proxy startup (use existing proxy)")
-@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-@click.option(
-    "--hermes-api-url",
-    envvar="HEADROOM_HERMES_API_URL",
-    help="OpenAI-compatible upstream used by the isolated Hermes config.",
-)
-@click.argument("hermes_args", nargs=-1, type=click.UNPROCESSED)
-def hermes(
-    port: int,
-    no_proxy: bool,
-    verbose: bool,
-    hermes_api_url: str | None,
-    hermes_args: tuple,
-) -> None:
-    """Launch Hermes through an isolated Headroom proxy.
-
-    Hermes reads its local proxy URL from its own config file. The caller must
-    write that isolated config and provide the original upstream here.
-    """
-    del verbose
-    hermes_bin = HERMES_TOOL.find_binary(shutil.which)
-    if not hermes_bin:
-        click.echo(HERMES_TOOL.missing_message())
-        raise SystemExit(1)
-    if not hermes_api_url:
-        raise click.ClickException(
-            "Hermes upstream API URL is required via --hermes-api-url or HEADROOM_HERMES_API_URL."
-        )
-    _launch_tool(
-        binary=hermes_bin,
-        args=hermes_args,
-        env=os.environ.copy(),
-        port=port,
-        no_proxy=no_proxy,
-        tool_label=HERMES_TOOL.label,
-        env_vars_display=[f"Hermes upstream={hermes_api_url}"],
-        agent_type="hermes",
-        openai_api_url=hermes_api_url,
-    )
-
-
-# =============================================================================
 # Qwen Code
 # =============================================================================
 QWEN_TOOL = ToolSpec(
