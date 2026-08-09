@@ -778,13 +778,16 @@ class HeadroomProxy(
         self.provider_runtime = build_proxy_provider_runtime(config)
         api_targets = self.provider_runtime.api_targets
 
-        # Preserve the long-standing proxy compatibility surface while keeping
-        # provider_runtime as the source of truth for resolved upstream targets.
-        HeadroomProxy.ANTHROPIC_API_URL = api_targets.anthropic
-        HeadroomProxy.OPENAI_API_URL = api_targets.openai
-        HeadroomProxy.GEMINI_API_URL = api_targets.gemini
-        HeadroomProxy.CLOUDCODE_API_URL = api_targets.cloudcode
-        HeadroomProxy.VERTEX_API_URL = api_targets.vertex
+        # Preserve the long-standing handler compatibility surface while keeping
+        # provider_runtime as the source of truth.  These must be instance
+        # attributes: mutating class attributes caused a second proxy created
+        # in-process (tests, embedded deployments) to silently retarget the
+        # first proxy's upstream traffic.
+        self.ANTHROPIC_API_URL = api_targets.anthropic
+        self.OPENAI_API_URL = api_targets.openai
+        self.GEMINI_API_URL = api_targets.gemini
+        self.CLOUDCODE_API_URL = api_targets.cloudcode
+        self.VERTEX_API_URL = api_targets.vertex
         self.anthropic_provider = self.provider_runtime.pipeline_provider("anthropic")
         self.openai_provider = self.provider_runtime.pipeline_provider("openai")
 
