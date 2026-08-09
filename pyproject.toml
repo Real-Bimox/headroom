@@ -284,12 +284,18 @@ dev = [
     "opentelemetry-exporter-otlp-proto-http>=1.24.0",
     "ollama>=0.4.0",
     "langchain-ollama>=0.2.0",
-    "hnswlib>=0.8.0",
     "sqlite-vec>=0.1.6",
-    "sentence-transformers>=2.2.0,<6.0",
     "numpy>=1.24.0",
     "openpyxl>=3.1.0",  # exercises spreadsheet_ingest (.xlsx) in the test suite
     "respx>=0.20.0",    # HTTP mock transport for passthrough handler tests
+]
+# Heavy ML dependencies are intentionally separate from the normal developer
+# loop.  They pull a GPU-capable Torch graph and made a focused unit-test sync
+# download several gigabytes.  ML/evaluation jobs opt in explicitly.
+dev-ml = [
+    "headroom-ai[dev]",
+    "hnswlib>=0.8.0",
+    "sentence-transformers>=2.2.0,<6.0",
 ]
 # All optional dependencies (everything you need).
 #
