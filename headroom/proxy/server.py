@@ -156,6 +156,11 @@ from headroom.proxy.modes import (
     normalize_proxy_mode,
 )
 from headroom.proxy.probe_recorder import probe_recorder_from_env
+from headroom.proxy.router_policy import (
+    BUILTIN_COMPRESSOR_FLAGS,
+    apply_compressor_selection as _apply_compressor_selection,
+    external_compressor_selection as _external_compressor_selection,
+)
 from headroom.proxy.project_context import (
     classify_project,
     set_current_project,
@@ -650,93 +655,6 @@ def _provider_httpx_client_options(
     if config.http_proxy:
         client_kwargs["proxy"] = config.http_proxy
     return config.http2 and not config.http_proxy, client_kwargs
-
-
-# Recognized built-in compressor names → the `ContentRouterConfig` `enable_*`
-# flag that gates each one. This is the whole selection surface: a `--compressor`
-# selection is mapped onto these existing flags with ZERO new dispatch logic, so
-# the router's if/elif built-in dispatch stays byte-identical. Names outside this
-# map (e.g. a third-party `headroom.compressor` entry point) are intentionally
-# ignored here — they belong to the registry, not the built-in enable_* seam.
-BUILTIN_COMPRESSOR_FLAGS: dict[str, str] = {
-    "smart_crusher": "enable_smart_crusher",
-    "kompress": "enable_kompress",
-    "code_aware": "enable_code_aware",
-    "search": "enable_search_compressor",
-    "log": "enable_log_compressor",
-    "tabular": "enable_tabular_compressor",
-    "config": "enable_config_compressor",
-    "html": "enable_html_extractor",
-    "image": "enable_image_optimizer",
-}
-
-
-def _apply_compressor_selection(
-    router_config: ContentRouterConfig,
-    compressors: set[str] | None,
-) -> None:
-    """Narrow the built-in compressor set on ``router_config`` in place.
-
-    ``compressors is None`` (the default) is a no-op: every ``enable_*`` flag
-    keeps its dataclass default, so behavior is byte-identical to today. When a
-    selection is given, each recognized built-in in :data:`BUILTIN_COMPRESSOR_FLAGS`
-    is enabled iff it (or the wildcard ``"*"``) was selected, and disabled
-    otherwise. Unrecognized names select no flag (reserved for the compressor
-    registry) but are surfaced with a warning, because a typo'd selection is
-    otherwise indistinguishable from "compress nothing" (#2384). This maps a
-    selection onto the existing flags without adding any dispatch logic.
-    """
-    if compressors is None:
-        return
-    selected = {name.strip() for name in compressors if name.strip()}
-    if not selected:
-        return
-    select_all = "*" in selected
-    unmatched = sorted(selected - set(BUILTIN_COMPRESSOR_FLAGS) - {"*"})
-    if unmatched:
-        if select_all or selected & set(BUILTIN_COMPRESSOR_FLAGS):
-            logger.warning(
-                "compressor selection: %s match no built-in compressor "
-                "(assumed registry names); built-ins: %s",
-                ", ".join(unmatched),
-                ", ".join(sorted(BUILTIN_COMPRESSOR_FLAGS)),
-            )
-        else:
-            logger.warning(
-                "compressor selection %s matches no built-in compressor — every "
-                "built-in compressor is now disabled. If this is a typo, valid "
-                "names are: %s (or '*' for all).",
-                ", ".join(unmatched),
-                ", ".join(sorted(BUILTIN_COMPRESSOR_FLAGS)),
-            )
-    for name, flag in BUILTIN_COMPRESSOR_FLAGS.items():
-        setattr(router_config, flag, select_all or name in selected)
-
-
-def _external_compressor_selection(compressors: set[str] | None) -> list[str] | None:
-    """Return the selected EXTERNAL (non-built-in) compressor names, or ``None``.
-
-    The built-in selection (:func:`_apply_compressor_selection`) consumes only
-    the names in :data:`BUILTIN_COMPRESSOR_FLAGS`; every OTHER selected name is a
-    third-party ``headroom.compressor`` entry point. This threads those to the
-    router (via ``ContentRouterConfig.active_external_compressors``) so it can
-    route matching blocks through them.
-
-    Returns ``None`` — the router's external-dispatch branch stays inert, so the
-    request path is byte-identical to today — when the selection is empty or
-    contains only recognized built-in names. ``"*"`` is preserved so the router
-    activates every discovered external compressor (mirroring the wildcard's
-    "select everything" meaning on the built-in side).
-    """
-    if not compressors:
-        return None
-    selected = {name.strip() for name in compressors if name.strip()}
-    if not selected:
-        return None
-    if "*" in selected:
-        return ["*"]
-    external = sorted(selected - set(BUILTIN_COMPRESSOR_FLAGS))
-    return external or None
 
 
 class HeadroomProxy(
