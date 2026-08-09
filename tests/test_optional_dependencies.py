@@ -24,6 +24,8 @@ TORCH_PACKAGE_NAME = "torch"
 TORCH_TRANSITIVE_PACKAGE_NAMES = frozenset({"sentence-transformers"})
 ORJSON_PACKAGE_NAME = "orjson"
 PROXY_EXTRA = "proxy"
+DEV_EXTRA = "dev"
+DEV_ML_EXTRA = "dev-ml"
 UV_LOCK_FILE = "uv.lock"
 
 
@@ -127,3 +129,19 @@ def test_proxy_extra_includes_orjson_for_litellm_backends() -> None:
 
     assert ORJSON_PACKAGE_NAME in selected_proxy_dependency_names
     assert ORJSON_PACKAGE_NAME in selected_all_dependency_names
+
+
+def test_default_dev_extra_stays_torch_free() -> None:
+    """Focused unit tests must not download the GPU-capable ML stack."""
+    pyproject = tomllib.loads((ROOT / PYPROJECT_FILE).read_text(encoding="utf-8"))
+    optional_deps = pyproject["project"]["optional-dependencies"]
+    environment = default_environment()
+
+    dev_dependencies = _selected_dependency_names_for_extra(optional_deps, DEV_EXTRA, environment)
+    dev_ml_dependencies = _selected_dependency_names_for_extra(
+        optional_deps, DEV_ML_EXTRA, environment
+    )
+
+    assert TORCH_PACKAGE_NAME not in dev_dependencies
+    assert "sentence-transformers" not in dev_dependencies
+    assert "sentence-transformers" in dev_ml_dependencies

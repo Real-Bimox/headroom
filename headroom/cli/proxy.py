@@ -14,7 +14,8 @@ from headroom.providers.registry import (
     resolve_api_targets,
     resolve_extra_headers,
 )
-from headroom.proxy.modes import PROXY_MODE_CACHE, normalize_proxy_mode
+from headroom.proxy.dependencies import check_proxy_dependencies
+from headroom.proxy.runtime_config import ResolvedRuntimeConfig
 
 from .main import main
 
@@ -1017,6 +1018,17 @@ def proxy(
     Usage with OpenAI-compatible clients:
         OPENAI_BASE_URL=http://localhost:8787/v1 your-app
     """
+    dependency_status = check_proxy_dependencies()
+    if not dependency_status.ready:
+        click.secho(
+            "Error: Proxy runtime dependencies are missing: "
+            + ", ".join(dependency_status.missing),
+            fg="red",
+            err=True,
+        )
+        click.secho(f"Install them with: {dependency_status.install_hint}", fg="red", err=True)
+        raise SystemExit(1)
+
     # Import here to avoid slow startup
     try:
         from headroom.proxy.server import (
@@ -1123,24 +1135,21 @@ def proxy(
 
     # Resolve mode: CLI flag > env var > default. Default is CACHE (Headroom's
     # coding posture): delta-only compression at ~0 prefix-cache busts.
-    effective_mode: str = normalize_proxy_mode(
-        mode or os.environ.get("HEADROOM_MODE") or PROXY_MODE_CACHE
+    runtime_config = ResolvedRuntimeConfig.resolve(
+        mode=mode,
+        stateless=stateless,
+        telemetry=telemetry,
+        no_telemetry=no_telemetry,
     )
+    effective_mode = runtime_config.mode
 
     # Stateless mode: CLI flag or env var
-    is_stateless = stateless or os.environ.get("HEADROOM_STATELESS", "").lower() in (
-        "true",
-        "1",
-        "yes",
-        "on",
-    )
+    is_stateless = runtime_config.stateless
 
     # Telemetry is opt-in (off by default). --telemetry opts in; --no-telemetry
     # forces it off. If both are passed, the explicit opt-out wins (fail-closed).
-    if telemetry:
-        os.environ["HEADROOM_TELEMETRY"] = "on"
-    if no_telemetry:
-        os.environ["HEADROOM_TELEMETRY"] = "off"
+    if runtime_config.telemetry_enabled is not None:
+        os.environ["HEADROOM_TELEMETRY"] = "on" if runtime_config.telemetry_enabled else "off"
 
     if codex_wire_debug or codex_wire_debug_dir:
         os.environ["HEADROOM_CODEX_WIRE_DEBUG"] = "1"

@@ -85,6 +85,8 @@ Headroom compresses everything your AI agent reads — tool outputs, logs, RAG c
 
 → [Architecture](https://headroom-docs.vercel.app/docs/architecture) · [CCR reversible compression](https://headroom-docs.vercel.app/docs/ccr) · [Kompress-v2-base model card](https://huggingface.co/chopratejas/kompress-v2-base)
 
+Fork-specific behavior is tracked in [Fork enhancements](docs/fork-enhancements.md).
+
 ## Get started (60 seconds)
 
 ```bash
@@ -112,6 +114,11 @@ Serena is registered at **user scope** (for Claude Code, in `~/.claude.json`), s
 The `headroom` CLI ships **only** via the PyPI package. The npm `headroom-ai` is the TypeScript SDK — a library you import (`import { compress } from 'headroom-ai'`), not a CLI, so it provides no `headroom` command.
 
 Granular extras: `[proxy]`, `[mcp]`, `[ml]`, `[code]`, `[memory]`, `[vector]` (optional HNSW backend — needs a C++ toolchain, not in `[all]`), `[relevance]`, `[image]`, `[agno]`, `[langchain]`, `[evals]`, `[pytorch-mps]` (Apple-GPU memory-embedder offload — set `HEADROOM_EMBEDDER_RUNTIME=pytorch_mps`). Requires **Python 3.10+**.
+
+For source development, `uv sync --extra dev` is intentionally lean. ML/evaluation
+dependencies are opt-in via `uv sync --extra dev-ml`. The proxy binds before
+optional model warmup; set `HEADROOM_EAGER_PRELOAD=1` only when you prefer a
+warmer first request over the fastest, most reliable startup.
 
 ### Codex / global install
 

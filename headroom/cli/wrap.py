@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from headroom._subprocess import pid_alive, run
+from headroom.cli.tool_spec import ToolSpec
 
 # Fix Windows cp1252 encoding — box-drawing characters require UTF-8
 if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
@@ -6477,6 +6478,12 @@ def openclaude(
 # =============================================================================
 # Mistral Vibe
 # =============================================================================
+VIBE_TOOL = ToolSpec(
+    key="vibe",
+    label="VIBE",
+    executables=("vibe",),
+    install_hint="Mistral Vibe: https://github.com/mistralai/mistral-vibe",
+)
 
 
 @wrap.command(context_settings={"ignore_unknown_options": True})
@@ -6528,10 +6535,9 @@ def vibe(
     if prepare_only:
         return
 
-    vibe_bin = shutil.which("vibe")
+    vibe_bin = VIBE_TOOL.find_binary(shutil.which)
     if not vibe_bin:
-        click.echo("Error: 'vibe' not found in PATH.")
-        click.echo("Install Mistral Vibe: https://github.com/mistralai/mistral-vibe")
+        click.echo(VIBE_TOOL.missing_message())
         raise SystemExit(1)
 
     env, env_vars_display = _build_mistral_vibe_launch_env(
@@ -6544,7 +6550,7 @@ def vibe(
         env=env,
         port=port,
         no_proxy=no_proxy,
-        tool_label="VIBE",
+        tool_label=VIBE_TOOL.label,
         env_vars_display=env_vars_display,
         learn=learn,
         memory=memory,
@@ -6557,6 +6563,13 @@ def vibe(
 # =============================================================================
 # Kimi CLI
 # =============================================================================
+KIMI_TOOL = ToolSpec(
+    key="kimi",
+    label="KIMI",
+    executables=("kimi", "kimi-cli"),
+    install_hint="Kimi CLI: https://github.com/MoonshotAI/kimi-cli",
+    missing_name="'kimi' (or 'kimi-cli')",
+)
 
 
 @wrap.command(context_settings={"ignore_unknown_options": True})
@@ -6616,10 +6629,9 @@ def kimi(
     if prepare_only:
         return
 
-    kimi_bin = shutil.which("kimi") or shutil.which("kimi-cli")
+    kimi_bin = KIMI_TOOL.find_binary(shutil.which)
     if not kimi_bin:
-        click.echo("Error: 'kimi' (or 'kimi-cli') not found in PATH.")
-        click.echo("Install Kimi CLI: https://github.com/MoonshotAI/kimi-cli")
+        click.echo(KIMI_TOOL.missing_message())
         raise SystemExit(1)
 
     env, env_vars_display = _build_kimi_launch_env(
@@ -6632,7 +6644,7 @@ def kimi(
         env=env,
         port=port,
         no_proxy=no_proxy,
-        tool_label="KIMI",
+        tool_label=KIMI_TOOL.label,
         env_vars_display=env_vars_display,
         learn=learn,
         memory=memory,
@@ -6645,6 +6657,13 @@ def kimi(
 # =============================================================================
 # Qwen Code
 # =============================================================================
+QWEN_TOOL = ToolSpec(
+    key="qwen",
+    label="QWEN",
+    executables=("qwen",),
+    install_hint="Qwen Code: https://github.com/QwenLM/qwen-code",
+)
+
 
 
 @wrap.command(context_settings={"ignore_unknown_options": True})
@@ -6721,10 +6740,9 @@ def qwen(
     if prepare_only:
         return
 
-    qwen_bin = shutil.which("qwen")
+    qwen_bin = QWEN_TOOL.find_binary(shutil.which)
     if not qwen_bin:
-        click.echo("Error: 'qwen' not found in PATH.")
-        click.echo("Install Qwen Code: https://github.com/QwenLM/qwen-code")
+        click.echo(QWEN_TOOL.missing_message())
         raise SystemExit(1)
 
     resolved_api_url = qwen_api_url or _qwen_default_api_url(plan)
@@ -6739,7 +6757,7 @@ def qwen(
         env=env,
         port=port,
         no_proxy=no_proxy,
-        tool_label="QWEN",
+        tool_label=QWEN_TOOL.label,
         env_vars_display=env_vars_display,
         learn=learn,
         memory=memory,
