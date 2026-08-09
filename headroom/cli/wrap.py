@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from headroom._subprocess import pid_alive, run
+from headroom.cli.tool_spec import ToolSpec
 
 # Fix Windows cp1252 encoding — box-drawing characters require UTF-8
 if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
@@ -6645,6 +6646,13 @@ def kimi(
 # =============================================================================
 # Qwen Code
 # =============================================================================
+QWEN_TOOL = ToolSpec(
+    key="qwen",
+    label="QWEN",
+    executables=("qwen",),
+    install_hint="Qwen Code: https://github.com/QwenLM/qwen-code",
+)
+
 
 
 @wrap.command(context_settings={"ignore_unknown_options": True})
@@ -6721,10 +6729,9 @@ def qwen(
     if prepare_only:
         return
 
-    qwen_bin = shutil.which("qwen")
+    qwen_bin = QWEN_TOOL.find_binary(shutil.which)
     if not qwen_bin:
-        click.echo("Error: 'qwen' not found in PATH.")
-        click.echo("Install Qwen Code: https://github.com/QwenLM/qwen-code")
+        click.echo(QWEN_TOOL.missing_message())
         raise SystemExit(1)
 
     resolved_api_url = qwen_api_url or _qwen_default_api_url(plan)
@@ -6739,7 +6746,7 @@ def qwen(
         env=env,
         port=port,
         no_proxy=no_proxy,
-        tool_label="QWEN",
+        tool_label=QWEN_TOOL.label,
         env_vars_display=env_vars_display,
         learn=learn,
         memory=memory,
