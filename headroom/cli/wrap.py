@@ -3976,6 +3976,19 @@ def _ensure_proxy(
 ) -> tuple[subprocess.Popen | None, int]:
     """Start or verify proxy. Returns (process_handle, actual_port)."""
     helpers = _live_wrap_module()
+    strict_port = os.environ.get("HEADROOM_STRICT_PORT", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+    if strict_port:
+        session_token = os.environ.get("HEADROOM_SESSION_TOKEN", "").strip()
+        if not session_token:
+            raise click.ClickException(
+                "HEADROOM_SESSION_TOKEN is required when HEADROOM_STRICT_PORT is enabled."
+            )
+        if no_proxy:
+            raise click.ClickException("Strict port mode cannot reuse a proxy with --no-proxy.")
+        if helpers._check_proxy(port):
+            raise click.ClickException(f"Headroom strict port {port} is already occupied.")
     copilot_subscription_seed_requested = (
         bool(copilot_api_token)
         or bool(copilot_refresh_oauth_token)
@@ -4282,6 +4295,10 @@ def _ensure_proxy(
             raise click.ClickException(str(e)) from e
 
         if actual_port != port:
+            if strict_port:
+                raise click.ClickException(
+                    f"Headroom strict port {port} could not be bound; refusing port {actual_port}."
+                )
             if isolated_copilot_subscription_proxy:
                 click.echo(
                     f"  Port {port} is reserved for the shared proxy; "
@@ -4386,6 +4403,9 @@ def _register_proxy_client(port: int) -> None:
     """
     try:
         payload: dict[str, Any] = {"pid": os.getpid(), "started_at": time.time()}
+        session_token = os.environ.get("HEADROOM_SESSION_TOKEN", "").strip()
+        if session_token:
+            payload["session_token"] = session_token
         ident = _proc_identity(os.getpid())
         if ident is not None:
             payload["start_src"], payload["start_time"] = ident
@@ -4606,6 +4626,31 @@ def _launch_tool(
         _print_telemetry_notice()
         click.echo()
 
+        strict_port = os.environ.get("HEADROOM_STRICT_PORT", "").strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+        if strict_port and proxy_holder[0] is not None:
+            child = subprocess.Popen([binary, *args], env=env)
+            while True:
+                child_code = child.poll()
+                proxy_code = proxy_holder[0].poll()
+                if proxy_code is not None and child_code is None:
+                    child.terminate()
+                    try:
+                        child.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        child.kill()
+                        child.wait()
+                    click.echo("  Error: owned Headroom proxy exited before the CLI.")
+                    raise SystemExit(70)
+                if child_code is not None:
+                    # A proxy-first race is a wrapper failure even if the child
+                    # concurrently reports success after losing its transport.
+                    if proxy_code is not None:
+                        click.echo("  Error: owned Headroom proxy exited during the CLI run.")
+                        raise SystemExit(70)
+                    raise SystemExit(child_code)
+                time.sleep(0.05)
         result = subprocess.run([binary, *args], env=env)
         raise SystemExit(result.returncode)
 
@@ -6651,6 +6696,64 @@ def kimi(
         agent_type="kimi",
         code_graph=code_graph,
         openai_api_url=kimi_api_url,
+    )
+
+
+# =============================================================================
+# Hermes CLI
+# =============================================================================
+HERMES_TOOL = ToolSpec(
+    key="hermes",
+    label="HERMES",
+    executables=("hermes",),
+    install_hint="Hermes CLI must be installed before wrapping it.",
+    missing_name="'hermes'",
+)
+
+
+@wrap.command(context_settings={"ignore_unknown_options": True})
+@click.option(
+    "--port", "-p", default=8787, type=click.IntRange(1, 65535), help="Proxy port (default: 8787)"
+)
+@click.option("--no-proxy", is_flag=True, help="Skip proxy startup (use existing proxy)")
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option(
+    "--hermes-api-url",
+    envvar="HEADROOM_HERMES_API_URL",
+    help="OpenAI-compatible upstream used by the isolated Hermes config.",
+)
+@click.argument("hermes_args", nargs=-1, type=click.UNPROCESSED)
+def hermes(
+    port: int,
+    no_proxy: bool,
+    verbose: bool,
+    hermes_api_url: str | None,
+    hermes_args: tuple,
+) -> None:
+    """Launch Hermes through an isolated Headroom proxy.
+
+    Hermes reads its local proxy URL from its own config file. The caller must
+    write that isolated config and provide the original upstream here.
+    """
+    del verbose
+    hermes_bin = HERMES_TOOL.find_binary(shutil.which)
+    if not hermes_bin:
+        click.echo(HERMES_TOOL.missing_message())
+        raise SystemExit(1)
+    if not hermes_api_url:
+        raise click.ClickException(
+            "Hermes upstream API URL is required via --hermes-api-url or HEADROOM_HERMES_API_URL."
+        )
+    _launch_tool(
+        binary=hermes_bin,
+        args=hermes_args,
+        env=os.environ.copy(),
+        port=port,
+        no_proxy=no_proxy,
+        tool_label=HERMES_TOOL.label,
+        env_vars_display=[f"Hermes upstream={hermes_api_url}"],
+        agent_type="hermes",
+        openai_api_url=hermes_api_url,
     )
 
 
