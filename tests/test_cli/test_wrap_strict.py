@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from unittest.mock import Mock, patch
+import json
 
 import pytest
 from click import ClickException
@@ -27,6 +28,20 @@ def test_strict_port_requires_session_token(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.delenv("HEADROOM_SESSION_TOKEN", raising=False)
     with pytest.raises(ClickException, match="HEADROOM_SESSION_TOKEN"):
         wrap_mod._ensure_proxy(19001, False)
+
+
+def test_dead_owner_marker_is_pruned_and_does_not_block_retry(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clients = tmp_path / "clients"
+    clients.mkdir()
+    marker = clients / "424242.json"
+    marker.write_text(json.dumps({"pid": 424242, "session_token": "old"}))
+    monkeypatch.setattr("headroom.paths.proxy_clients_dir", lambda _port: clients)
+    monkeypatch.setattr(wrap_mod, "_pid_alive", lambda _pid: False)
+
+    assert wrap_mod._live_proxy_clients(19001) == []
+    assert not marker.exists()
 
 
 def test_proxy_death_forces_nonzero_even_when_child_exits_zero(
