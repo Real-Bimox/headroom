@@ -85,6 +85,8 @@ Headroom compresses everything your AI agent reads — tool outputs, logs, RAG c
 
 → [Architecture](https://headroom-docs.vercel.app/docs/architecture) · [CCR reversible compression](https://headroom-docs.vercel.app/docs/ccr) · [Kompress-v2-base model card](https://huggingface.co/chopratejas/kompress-v2-base)
 
+Fork-specific behavior is tracked in [Fork enhancements](docs/fork-enhancements.md).
+
 ## Get started (60 seconds)
 
 ```bash
