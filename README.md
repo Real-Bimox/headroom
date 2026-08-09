@@ -113,6 +113,11 @@ The `headroom` CLI ships **only** via the PyPI package. The npm `headroom-ai` is
 
 Granular extras: `[proxy]`, `[mcp]`, `[ml]`, `[code]`, `[memory]`, `[vector]` (optional HNSW backend — needs a C++ toolchain, not in `[all]`), `[relevance]`, `[image]`, `[agno]`, `[langchain]`, `[evals]`, `[pytorch-mps]` (Apple-GPU memory-embedder offload — set `HEADROOM_EMBEDDER_RUNTIME=pytorch_mps`). Requires **Python 3.10+**.
 
+For source development, `uv sync --extra dev` is intentionally lean. ML/evaluation
+dependencies are opt-in via `uv sync --extra dev-ml`. The proxy binds before
+optional model warmup; set `HEADROOM_EAGER_PRELOAD=1` only when you prefer a
+warmer first request over the fastest, most reliable startup.
+
 ### Codex / global install
 
 If Codex or another MCP client cannot inherit a shell `PATH` reliably, install Headroom as a persistent uv tool and point the client at the absolute binary path:
