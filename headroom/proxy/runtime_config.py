@@ -36,7 +36,9 @@ class ResolvedRuntimeConfig:
         no_telemetry: bool,
         environ: Mapping[str, str] | None = None,
     ) -> "ResolvedRuntimeConfig":
-        env = environ or os.environ
+        # An explicitly supplied empty mapping is meaningful in tests and for
+        # embedded deployments: it must not silently fall back to process env.
+        env = os.environ if environ is None else environ
         resolved_telemetry: bool | None = None
         if telemetry:
             resolved_telemetry = True
